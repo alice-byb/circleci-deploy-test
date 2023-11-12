@@ -1,0 +1,39 @@
+defaults: &defaults
+  working_directory: ~/app/
+  docker:
+    - image: cimg/node:16.20.0
+  resource_class: medium
+
+test: &test
+  <<: *defaults
+  steps:
+    - checkout
+    - run:
+        name: log
+        command: echo 'hi!'
+
+version: 2.1
+jobs:
+  test-uat:
+    <<: *test
+  test-hotfix:
+    <<: *test
+
+workflows:
+  version: 2
+  application:
+    jobs:
+      - test-uat:
+          filters:
+            branches:
+              only:
+                - /rc-\d+\.0\.0/
+      - hold-hotfix:
+          type: approval
+          filters:
+            branches:
+              only:
+                - /rc-\d+\.([1-9]+\.\d+|\d+\.[1-9])/
+      - test-hotfix:
+          requires:
+            - hold-hotfix
